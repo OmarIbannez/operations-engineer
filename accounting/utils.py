@@ -127,7 +127,7 @@ class PolicyAccounting(object):
         Create invoices for the policy according with its billing schedule
         """
         for invoice in self.policy.invoices:
-            invoice.delete()
+            db.session.delete(invoice)
 
         invoices = []
         first_invoice = Invoice(
@@ -248,6 +248,12 @@ def insert_data():
     p3.named_insured = ryan_bucket.id
     p3.agent = john_doe_agent.id
     policies.append(p3)
+
+    p4 = Policy('Policy Four', date(2015, 2, 1), 500)
+    p4.billing_schedule = 'Two-Pay'
+    p4.named_insured = ryan_bucket.id
+    p4.agent = john_doe_agent.id
+    policies.append(p4)
 
     for policy in policies:
         db.session.add(policy)
