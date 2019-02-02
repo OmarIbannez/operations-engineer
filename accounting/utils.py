@@ -20,12 +20,13 @@ BILLING_SCHEDULES = {
     "Two-Pay": 2,
 }
 
+
 class PolicyAccounting(object):
     """
      Each policy has its own instance of accounting.
     """
     def __init__(self, policy_id):
-        self.policy = Policy.query.filter_by(id=policy_id).one()
+        self.policy = db.session.query(Policy).filter_by(id=policy_id).one()
 
         if not self.policy.invoices:
             self.make_invoices()
@@ -34,7 +35,7 @@ class PolicyAccounting(object):
         if not date_cursor:
             date_cursor = datetime.now().date()
 
-        invoices = Invoice.query.filter_by(policy_id=self.policy.id)\
+        invoices = db.session.query(Invoice).filter_by(policy_id=self.policy.id)\
                                 .filter(Invoice.bill_date < date_cursor)\
                                 .order_by(Invoice.bill_date)\
                                 .all()
@@ -42,7 +43,7 @@ class PolicyAccounting(object):
         for invoice in invoices:
             due_now += invoice.amount_due
 
-        payments = Payment.query.filter_by(policy_id=self.policy.id)\
+        payments = db.session.query(Payment).filter_by(policy_id=self.policy.id)\
                                 .filter(Payment.transaction_date < date_cursor)\
                                 .all()
         for payment in payments:
@@ -82,7 +83,7 @@ class PolicyAccounting(object):
         if not date_cursor:
             date_cursor = datetime.now().date()
 
-        invoices = Invoice.query.filter_by(policy_id=self.policy.id)\
+        invoices = db.session.query(Invoice).filter_by(policy_id=self.policy.id)\
                                 .filter(Invoice.cancel_date <= date_cursor)\
                                 .order_by(Invoice.bill_date)\
                                 .all()
