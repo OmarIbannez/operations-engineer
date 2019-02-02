@@ -36,7 +36,10 @@ class Policy(Base):
         self.effective_date = effective_date
         self.annual_premium = annual_premium
 
-    invoices = db.relation("Invoice", primaryjoin="Invoice.policy_id==Policy.id")
+    invoices = db.relation(
+        'Invoice',
+        primaryjoin="and_(Invoice.policy_id==Policy.id, Invoice.deleted == 0)"
+    )
 
 
 class Contact(Base):

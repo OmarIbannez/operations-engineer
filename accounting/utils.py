@@ -153,6 +153,28 @@ class PolicyAccounting(object):
         else:
             print "THIS POLICY SHOULD NOT CANCEL"
 
+    def switch_billing_schedule(self, new_billing_schedule):
+        """
+        Move a policy to a different billing schedule
+        :param new_billing_schedule:
+        :return:
+        """
+        try:
+            BILLING_SCHEDULES[new_billing_schedule]
+        except KeyError:
+            raise KeyError("Invalid billing schedule")
+        if self.policy.billing_schedule == new_billing_schedule:
+            raise UserWarning(
+                "This policy is already on {0}".format(new_billing_schedule)
+            )
+        for invoice in self.policy.invoices:
+            invoice.deleted = 1
+            db.session.add(invoice)
+        self.policy.billing_schedule = new_billing_schedule
+        db.session.add(self.policy)
+        db.session.flush()
+        self.make_invoices()
+
     def make_invoices(self):
         """
         Create invoices for the policy according with its billing schedule
