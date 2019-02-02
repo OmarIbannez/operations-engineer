@@ -3,6 +3,8 @@
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
 
+from sqlalchemy.orm.exc import NoResultFound
+
 from accounting import db
 from models import Contact, Invoice, Payment, Policy
 
@@ -73,12 +75,23 @@ class PolicyAccounting(object):
         """
         if not date_cursor:
             date_cursor = datetime.now().date()
-
+        due_to_non_pay = self.evaluate_cancellation_pending_due_to_non_pay(date_cursor)
         if not contact_id:
             try:
                 contact_id = self.policy.named_insured
             except:
                 pass
+
+        try:
+            contact = Contact.query.filter_by(id=contact_id).one()
+        except NoResultFound:
+            raise NoResultFound("We couldn't find any contact with this id")
+
+        if due_to_non_pay and not contact.role == "Agent":
+            raise UserWarning(
+                "Policy has passed the due date without being "
+                "paid in full, only an agent can't make a payment"
+            )
 
         payment = Payment(self.policy.id, contact_id, amount, date_cursor)
         db.session.add(payment)
@@ -88,12 +101,30 @@ class PolicyAccounting(object):
 
     def evaluate_cancellation_pending_due_to_non_pay(self, date_cursor=None):
         """
-         If this function returns true, an invoice
-         on a policy has passed the due date without
-         being paid in full. However, it has not necessarily
-         made it to the cancel_date yet.
+        If this function returns true, an invoice
+        on a policy has passed the due date without
+        being paid in full. However, it has not necessarily
+        made it to the cancel_date yet.
+        :param date_cursor:
+        :return:
         """
-        pass
+        if not date_cursor:
+            date_cursor = datetime.now().date()
+
+        invoices = (
+            db.session.query(Invoice)
+            .filter_by(policy_id=self.policy.id)
+            .filter(Invoice.due_date <= date_cursor)
+            .filter(Invoice.cancel_date >= date_cursor)
+            .order_by(Invoice.bill_date)
+            .all()
+        )
+
+        for invoice in invoices:
+            if not self.return_account_balance(invoice.due_date):
+                continue
+            else:
+                return True
 
     def evaluate_cancel(self, date_cursor=None):
         """
