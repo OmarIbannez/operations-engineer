@@ -22,8 +22,8 @@ BILLING_SCHEDULES = {
 
 
 class PolicyAccounting(object):
-    """
-     Each policy has its own instance of accounting.
+    """"
+    Accounting helper for policies
     """
 
     def __init__(self, policy_id):
@@ -33,6 +33,11 @@ class PolicyAccounting(object):
             self.make_invoices()
 
     def return_account_balance(self, date_cursor=None):
+        """
+        Returns the balance of the policy in a given point in time
+        :param date_cursor:
+        :return:
+        """
         if not date_cursor:
             date_cursor = datetime.now().date()
 
@@ -59,6 +64,13 @@ class PolicyAccounting(object):
         return due_now
 
     def make_payment(self, contact_id=None, date_cursor=None, amount=0):
+        """
+        Creates a payment in a given point in time
+        :param contact_id:
+        :param date_cursor:
+        :param amount:
+        :return:
+        """
         if not date_cursor:
             date_cursor = datetime.now().date()
 
@@ -84,6 +96,12 @@ class PolicyAccounting(object):
         pass
 
     def evaluate_cancel(self, date_cursor=None):
+        """
+        Check if there is any balance after any of the cancel dates
+        of the invoices in this policy
+        :param date_cursor:
+        :return:
+        """
         if not date_cursor:
             date_cursor = datetime.now().date()
 
@@ -105,6 +123,9 @@ class PolicyAccounting(object):
             print "THIS POLICY SHOULD NOT CANCEL"
 
     def make_invoices(self):
+        """
+        Create invoices for the policy according with its billing schedule
+        """
         for invoice in self.policy.invoices:
             invoice.delete()
 
