@@ -12,6 +12,14 @@ This is the base code for the engineer project.
 #######################################################
 """
 
+BILLING_SCHEDULES = {
+    "Annual": None,
+    "Semi-Annual": 3,
+    "Quarterly": 4,
+    "Monthly": 12,
+    "Two-Pay": 2,
+}
+
 class PolicyAccounting(object):
     """
      Each policy has its own instance of accounting.
@@ -93,8 +101,6 @@ class PolicyAccounting(object):
         for invoice in self.policy.invoices:
             invoice.delete()
 
-        billing_schedules = {'Annual': None, 'Semi-Annual': 3, 'Quarterly': 4, 'Monthly': 12}
-
         invoices = []
         first_invoice = Invoice(self.policy.id,
                                 self.policy.effective_date, #bill_date
@@ -106,29 +112,42 @@ class PolicyAccounting(object):
         if self.policy.billing_schedule == "Annual":
             pass
         elif self.policy.billing_schedule == "Two-Pay":
-            first_invoice.amount_due = first_invoice.amount_due / billing_schedules.get(self.policy.billing_schedule)
-            for i in range(1, billing_schedules.get(self.policy.billing_schedule)):
+            first_invoice.amount_due = first_invoice.amount_due / BILLING_SCHEDULES.get(self.policy.billing_schedule)
+            for i in range(1, BILLING_SCHEDULES.get(self.policy.billing_schedule)):
                 months_after_eff_date = i*6
                 bill_date = self.policy.effective_date + relativedelta(months=months_after_eff_date)
                 invoice = Invoice(self.policy.id,
                                   bill_date,
                                   bill_date + relativedelta(months=1),
                                   bill_date + relativedelta(months=1, days=14),
-                                  self.policy.annual_premium / billing_schedules.get(self.policy.billing_schedule))
+                                  self.policy.annual_premium / BILLING_SCHEDULES.get(self.policy.billing_schedule))
                 invoices.append(invoice)
         elif self.policy.billing_schedule == "Quarterly":
-            first_invoice.amount_due = first_invoice.amount_due / billing_schedules.get(self.policy.billing_schedule)
-            for i in range(1, billing_schedules.get(self.policy.billing_schedule)):
+            first_invoice.amount_due = first_invoice.amount_due / BILLING_SCHEDULES.get(self.policy.billing_schedule)
+            for i in range(1, BILLING_SCHEDULES.get(self.policy.billing_schedule)):
                 months_after_eff_date = i*3
                 bill_date = self.policy.effective_date + relativedelta(months=months_after_eff_date)
                 invoice = Invoice(self.policy.id,
                                   bill_date,
                                   bill_date + relativedelta(months=1),
                                   bill_date + relativedelta(months=1, days=14),
-                                  self.policy.annual_premium / billing_schedules.get(self.policy.billing_schedule))
+                                  self.policy.annual_premium / BILLING_SCHEDULES.get(self.policy.billing_schedule))
                 invoices.append(invoice)
         elif self.policy.billing_schedule == "Monthly":
-            pass
+            first_invoice.amount_due = first_invoice.amount_due / BILLING_SCHEDULES.get(
+                self.policy.billing_schedule
+            )
+            for i in range(1, BILLING_SCHEDULES.get(self.policy.billing_schedule)):
+                bill_date = self.policy.effective_date + relativedelta(months=i)
+                invoice = Invoice(
+                    self.policy.id,
+                    bill_date,
+                    bill_date + relativedelta(months=1),
+                    bill_date + relativedelta(months=1, days=14),
+                    self.policy.annual_premium
+                    / BILLING_SCHEDULES.get(self.policy.billing_schedule),
+                )
+                invoices.append(invoice)
         else:
             print "You have chosen a bad billing schedule."
 
