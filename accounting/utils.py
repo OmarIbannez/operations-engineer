@@ -232,8 +232,9 @@ def insert_data():
     db.session.commit()
 
     policies = []
-    p1 = Policy("Policy One", date(2015, 1, 1), 365)
-    p1.billing_schedule = "Annual"
+    p1 = Policy('Policy One', date(2015, 1, 1), 365)
+    p1.billing_schedule = 'Annual'
+    p1.named_insured = john_doe_insured.id
     p1.agent = bob_smith.id
     policies.append(p1)
 
