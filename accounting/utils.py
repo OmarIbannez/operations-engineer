@@ -30,6 +30,13 @@ class PolicyAccounting(object):
 
     def __init__(self, policy_id):
         self.policy = db.session.query(Policy).filter_by(id=policy_id).one()
+        if self.policy.status == "Canceled":
+            raise UserWarning(
+                "This policy canceled \nCancel date: {0} \nReason: {1}".format(
+                    self.policy.cancel_date.strftime("%Y-%m-%d"),
+                    self.policy.cancel_reason
+                )
+            )
 
         if not self.policy.invoices:
             self.make_invoices()
@@ -83,7 +90,7 @@ class PolicyAccounting(object):
                 pass
 
         try:
-            contact = Contact.query.filter_by(id=contact_id).one()
+            contact = db.session.query(Contact).filter_by(id=contact_id).one()
         except NoResultFound:
             raise NoResultFound("We couldn't find any contact with this id")
 
@@ -251,6 +258,17 @@ class PolicyAccounting(object):
         for invoice in invoices:
             db.session.add(invoice)
         db.session.commit()
+
+    def cancel_policy(self, reason, date_cursor=None):
+        if not date_cursor:
+            date_cursor = datetime.now().date()
+        self.policy.cancel_reason = reason
+        self.policy.cancel_date = date_cursor
+        self.policy.status = "Canceled"
+        db.session.add(self.policy)
+        db.session.commit()
+        self.policy = None
+        print "Policy successfully canceled!"
 
 
 ################################
