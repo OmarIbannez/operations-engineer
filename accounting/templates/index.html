@@ -1,15 +1,122 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Some sort of title?</title>
-  <meta name="description" content="What is this?">
-  <meta name="author" content="Who?">
-  <!--[if lt IE 9]>
-<script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-<![endif]-->
-</head>
-<body>
-    <p>Your server is working.</p>
-</body>
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
+    <title>Insurance company</title>
+  </head>
+  <body>
+  <header class="navbar navbar-dark bg-dark flex-md-nowrap p-0 shadow" style="padding: .2rem !important; margin-bottom: 1rem;">
+    <a class="navbar-brand col-sm-3 col-md-2 mr-0" href="#">Insurance Company</a>
+    <div class="input-group">
+      <div class="input-group-append">
+        <input data-bind="value: policy_number" class="form-control form-control-dark" type="text" placeholder="Policy number" aria-label="Search" style="border-radius: 4px 0 0 4px;">
+      </div>
+      <div class="input-group-append">
+        <input data-bind="value: date_cursor" class="form-control form-control-dark" type="date" name="date" style="border-radius: 0 !important;">
+      </div>
+      <div class="input-group-append">
+        <button type="button" class="btn btn-primary" data-bind="click: getPolicy">Search</button>
+      </div>
+    </div>
+  </header>
+  <div class="container-fluid">
+    <main role="main" class="col-12 col-md-12 col-xl-12 py-md-12 pl-md-12 bd-content">
+      <p>Policy Balance: <span data-bind="text: balance"></span></p>
+      <div class="table-responsive">
+        <table class="table table-striped table-sm">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Bill date</th>
+              <th>Due date</th>
+              <th>Amount due</th>
+            </tr>
+          </thead>
+          <tbody data-bind="foreach: invoices">
+            <tr>
+                <td data-bind="text: id"></td>
+                <td data-bind="text: bill_date"></td>
+                <td data-bind="text: due_date"></td>
+                <td data-bind="text: amount_due"></td>
+            </tr>
+        </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.6/umd/popper.min.js" integrity="sha384-wHAiFfRlMFy6i5SRaxvfOCifBUQy1xHdJ/yoi7FRNXMRBu5WHdZYu1hA6ZOblgut" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/knockout/3.4.2/knockout-min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/knockout-validation/2.0.3/knockout.validation.min.js"></script>
+    <script type="application/javascript">
+      function MainViewModel() {
+          let self = this;
+          self.balance = ko.observable(0);
+          self.policy_number = ko.observable().extend({ required: true });
+          self.date_cursor = ko.observable().extend({ required: true });
+          self.invoices = ko.observableArray([]);
+          self.showError = function(message) {
+            $(".toast-body").text(message);
+            $('.toast').toast("show");
+          };
+          self.getPolicy = function(e) {
+            if (!self.policy_number.isValid()) {
+              self.showError("Enter a policy number");
+              return;
+            }
+            if (!self.date_cursor.isValid()) {
+              self.showError("Enter a date");
+              return;
+            }
+            $.ajax({
+              type : 'GET',
+              url : '/policy/api/invoices',
+              data : {
+                policy_number: self.policy_number,
+                date_cursor: self.date_cursor,
+              },
+              dataType : "json",
+              global : false,
+              success : function(data) {
+                self.balance(data.balance);
+                self.invoices($.map(data.invoices, function (invoice) {
+                     return new InvoiceViewModel(invoice);
+                }));
+              },
+              error: function (xhr, ajaxOptions, thrownError) {
+                self.showError(xhr.responseJSON.message);
+              },
+            });
+          };
+      }
+      function InvoiceViewModel(data) {
+        let self = this;
+        self.id =  ko.observable(data.id);
+        self.bill_date =  ko.observable(data.bill_date);
+        self.due_date =  ko.observable(data.due_date);
+        self.amount_due =  ko.observable(data.amount_due);
+      }
+      ko.applyBindings(new MainViewModel());
+    </script>
+    <div aria-live="polite" aria-atomic="true" style="position: relative; min-height: 200px;">
+      <div class="toast" style="margin: 0 auto;" data-delay="2000">
+        <div class="toast-header" style="background: red; color: white;">
+          <strong class="mr-auto">Bootstrap</strong>
+          <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="toast-body">
+        </div>
+      </div>
+    </div>
+  </body>
 </html>
