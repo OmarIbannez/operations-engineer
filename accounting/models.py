@@ -1,5 +1,9 @@
-from accounting import db
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, VARCHAR, INTEGER, DATE, Enum, ForeignKey, Boolean
+from sqlalchemy.orm import relation
+from sqlalchemy import create_engine
+from accounting.config import SQLALCHEMY_DATABASE_URI
+
 
 Base = declarative_base()
 
@@ -10,32 +14,27 @@ class Policy(Base):
     __table_args__ = {}
 
     # column definitions
-    id = db.Column(u"id", db.INTEGER(), primary_key=True, nullable=False)
-    policy_number = db.Column(u"policy_number", db.VARCHAR(length=128), nullable=False)
-    effective_date = db.Column(u"effective_date", db.DATE(), nullable=False)
-    status = db.Column(
+    id = Column(u"id", INTEGER(), primary_key=True, nullable=False)
+    policy_number = Column(u"policy_number", VARCHAR(length=128), nullable=False)
+    effective_date = Column(u"effective_date", DATE(), nullable=False)
+    status = Column(
         u"status",
-        db.Enum(u"Active", u"Canceled", u"Expired"),
+        Enum(u"Active", u"Canceled", u"Expired"),
         default=u"Active",
         nullable=False,
     )
-    billing_schedule = db.Column(
+    billing_schedule = Column(
         u"billing_schedule",
-        db.Enum(u"Annual", u"Two-Pay", u"Quarterly", u"Monthly"),
+        Enum(u"Annual", u"Two-Pay", u"Quarterly", u"Monthly"),
         default=u"Annual",
         nullable=False,
     )
-    annual_premium = db.Column(u"annual_premium", db.INTEGER(), nullable=False)
-    named_insured = db.Column(
-        u"named_insured", db.INTEGER(), db.ForeignKey("contacts.id")
-    )
-    agent = db.Column(u"agent", db.INTEGER(), db.ForeignKey("contacts.id"))
-    cancel_date = db.Column(u'cancel_date', db.DATE(), nullable=True, default=None)
-    cancel_reason = db.Column(
-        u'cancel_reason',
-        db.VARCHAR(length=128),
-        nullable=True,
-        default=None
+    annual_premium = Column(u"annual_premium", INTEGER(), nullable=False)
+    named_insured = Column(u"named_insured", INTEGER(), ForeignKey("contacts.id"))
+    agent = Column(u"agent", INTEGER(), ForeignKey("contacts.id"))
+    cancel_date = Column(u"cancel_date", DATE(), nullable=True, default=None)
+    cancel_reason = Column(
+        u"cancel_reason", VARCHAR(length=128), nullable=True, default=None
     )
 
     def __init__(self, policy_number, effective_date, annual_premium):
@@ -43,9 +42,9 @@ class Policy(Base):
         self.effective_date = effective_date
         self.annual_premium = annual_premium
 
-    invoices = db.relation(
-        'Invoice',
-        primaryjoin="and_(Invoice.policy_id==Policy.id, Invoice.deleted == 0)"
+    invoices = relation(
+        "Invoice",
+        primaryjoin="and_(Invoice.policy_id==Policy.id, Invoice.deleted == 0)",
     )
 
 
@@ -55,9 +54,9 @@ class Contact(Base):
     __table_args__ = {}
 
     # column definitions
-    id = db.Column(u"id", db.INTEGER(), primary_key=True, nullable=False)
-    name = db.Column(u"name", db.VARCHAR(length=128), nullable=False)
-    role = db.Column(u"role", db.Enum(u"Named Insured", u"Agent"), nullable=False)
+    id = Column(u"id", INTEGER(), primary_key=True, nullable=False)
+    name = Column(u"name", VARCHAR(length=128), nullable=False)
+    role = Column(u"role", Enum(u"Named Insured", u"Agent"), nullable=False)
 
     def __init__(self, name, role):
         self.name = name
@@ -70,16 +69,16 @@ class Invoice(Base):
     __table_args__ = {}
 
     # column definitions
-    id = db.Column(u"id", db.INTEGER(), primary_key=True, nullable=False)
-    policy_id = db.Column(
-        u"policy_id", db.INTEGER(), db.ForeignKey("policies.id"), nullable=False
+    id = Column(u"id", INTEGER(), primary_key=True, nullable=False)
+    policy_id = Column(
+        u"policy_id", INTEGER(), ForeignKey("policies.id"), nullable=False
     )
-    bill_date = db.Column(u"bill_date", db.DATE(), nullable=False)
-    due_date = db.Column(u"due_date", db.DATE(), nullable=False)
-    cancel_date = db.Column(u"cancel_date", db.DATE(), nullable=False)
-    amount_due = db.Column(u"amount_due", db.INTEGER(), nullable=False)
-    deleted = db.Column(
-        u"deleted", db.Boolean, default=False, server_default="0", nullable=False
+    bill_date = Column(u"bill_date", DATE(), nullable=False)
+    due_date = Column(u"due_date", DATE(), nullable=False)
+    cancel_date = Column(u"cancel_date", DATE(), nullable=False)
+    amount_due = Column(u"amount_due", INTEGER(), nullable=False)
+    deleted = Column(
+        u"deleted", Boolean, default=False, server_default="0", nullable=False
     )
 
     def __init__(self, policy_id, bill_date, due_date, cancel_date, amount_due):
@@ -92,8 +91,8 @@ class Invoice(Base):
     def serialize(self):
         return {
             "id": self.id,
-            "bill_date": self.bill_date.strftime('%Y-%m-%d'),
-            "due_date": self.due_date.strftime('%Y-%m-%d'),
+            "bill_date": self.bill_date.strftime("%Y-%m-%d"),
+            "due_date": self.due_date.strftime("%Y-%m-%d"),
             "amount_due": self.amount_due,
         }
 
@@ -104,15 +103,15 @@ class Payment(Base):
     __table_args__ = {}
 
     # column definitions
-    id = db.Column(u"id", db.INTEGER(), primary_key=True, nullable=False)
-    policy_id = db.Column(
-        u"policy_id", db.INTEGER(), db.ForeignKey("policies.id"), nullable=False
+    id = Column(u"id", INTEGER(), primary_key=True, nullable=False)
+    policy_id = Column(
+        u"policy_id", INTEGER(), ForeignKey("policies.id"), nullable=False
     )
-    contact_id = db.Column(
-        u"contact_id", db.INTEGER(), db.ForeignKey("contacts.id"), nullable=False
+    contact_id = Column(
+        u"contact_id", INTEGER(), ForeignKey("contacts.id"), nullable=False
     )
-    amount_paid = db.Column(u"amount_paid", db.INTEGER(), nullable=False)
-    transaction_date = db.Column(u"transaction_date", db.DATE(), nullable=False)
+    amount_paid = Column(u"amount_paid", INTEGER(), nullable=False)
+    transaction_date = Column(u"transaction_date", DATE(), nullable=False)
 
     def __init__(self, policy_id, contact_id, amount_paid, transaction_date):
         self.policy_id = policy_id
@@ -121,4 +120,5 @@ class Payment(Base):
         self.transaction_date = transaction_date
 
 
-Base.metadata.create_all(db.engine)
+engine = create_engine(SQLALCHEMY_DATABASE_URI)
+Base.metadata.create_all(engine)

@@ -4,9 +4,12 @@ from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
 
 from sqlalchemy.orm.exc import NoResultFound
+from accounting.models import Base
+from sqlalchemy import create_engine
+from accounting.config import SQLALCHEMY_DATABASE_URI
 
-from accounting import db
-from models import Contact, Invoice, Payment, Policy
+from accounting.sql_base import DBSession
+from accounting.models import Contact, Invoice, Payment, Policy
 
 """
 #######################################################
@@ -29,12 +32,12 @@ class PolicyAccounting(object):
     """
 
     def __init__(self, policy_id):
-        self.policy = db.session.query(Policy).filter_by(id=policy_id).one()
+        self.policy = DBSession.query(Policy).filter_by(id=policy_id).one()
         if self.policy.status == "Canceled":
             raise UserWarning(
                 "This policy canceled \nCancel date: {0} \nReason: {1}".format(
                     self.policy.cancel_date.strftime("%Y-%m-%d"),
-                    self.policy.cancel_reason
+                    self.policy.cancel_reason,
                 )
             )
 
@@ -51,7 +54,7 @@ class PolicyAccounting(object):
             date_cursor = datetime.now().date()
 
         invoices = (
-            db.session.query(Invoice)
+            DBSession.query(Invoice)
             .filter_by(policy_id=self.policy.id)
             .filter(Invoice.bill_date <= date_cursor)
             .order_by(Invoice.bill_date)
@@ -62,7 +65,7 @@ class PolicyAccounting(object):
             due_now += invoice.amount_due
 
         payments = (
-            db.session.query(Payment)
+            DBSession.query(Payment)
             .filter_by(policy_id=self.policy.id)
             .filter(Payment.transaction_date <= date_cursor)
             .all()
@@ -90,7 +93,7 @@ class PolicyAccounting(object):
                 pass
 
         try:
-            contact = db.session.query(Contact).filter_by(id=contact_id).one()
+            contact = DBSession.query(Contact).filter_by(id=contact_id).one()
         except NoResultFound:
             raise NoResultFound("We couldn't find any contact with this id")
 
@@ -101,8 +104,8 @@ class PolicyAccounting(object):
             )
 
         payment = Payment(self.policy.id, contact_id, amount, date_cursor)
-        db.session.add(payment)
-        db.session.commit()
+        DBSession.add(payment)
+        DBSession.commit()
 
         return payment
 
@@ -119,7 +122,7 @@ class PolicyAccounting(object):
             date_cursor = datetime.now().date()
 
         invoices = (
-            db.session.query(Invoice)
+            DBSession.query(Invoice)
             .filter_by(policy_id=self.policy.id)
             .filter(Invoice.due_date <= date_cursor)
             .filter(Invoice.cancel_date >= date_cursor)
@@ -144,7 +147,7 @@ class PolicyAccounting(object):
             date_cursor = datetime.now().date()
 
         invoices = (
-            db.session.query(Invoice)
+            DBSession.query(Invoice)
             .filter_by(policy_id=self.policy.id)
             .filter(Invoice.cancel_date <= date_cursor)
             .order_by(Invoice.bill_date)
@@ -155,10 +158,10 @@ class PolicyAccounting(object):
             if not self.return_account_balance(invoice.cancel_date):
                 continue
             else:
-                print "THIS POLICY SHOULD HAVE CANCELED"
+                print("THIS POLICY SHOULD HAVE CANCELED")
                 break
         else:
-            print "THIS POLICY SHOULD NOT CANCEL"
+            print("THIS POLICY SHOULD NOT CANCEL")
 
     def switch_billing_schedule(self, new_billing_schedule):
         """
@@ -176,10 +179,10 @@ class PolicyAccounting(object):
             )
         for invoice in self.policy.invoices:
             invoice.deleted = 1
-            db.session.add(invoice)
+            DBSession.add(invoice)
         self.policy.billing_schedule = new_billing_schedule
-        db.session.add(self.policy)
-        db.session.flush()
+        DBSession.add(self.policy)
+        DBSession.flush()
         self.make_invoices()
 
     def make_invoices(self):
@@ -187,7 +190,7 @@ class PolicyAccounting(object):
         Create invoices for the policy according with its billing schedule
         """
         for invoice in self.policy.invoices:
-            db.session.delete(invoice)
+            DBSession.delete(invoice)
 
         invoices = []
         first_invoice = Invoice(
@@ -253,11 +256,11 @@ class PolicyAccounting(object):
                 )
                 invoices.append(invoice)
         else:
-            print "You have chosen a bad billing schedule."
+            print("You have chosen a bad billing schedule.")
 
         for invoice in invoices:
-            db.session.add(invoice)
-        db.session.commit()
+            DBSession.add(invoice)
+        DBSession.commit()
 
     def cancel_policy(self, reason, date_cursor=None):
         if not date_cursor:
@@ -265,10 +268,10 @@ class PolicyAccounting(object):
         self.policy.cancel_reason = reason
         self.policy.cancel_date = date_cursor
         self.policy.status = "Canceled"
-        db.session.add(self.policy)
-        db.session.commit()
+        DBSession.add(self.policy)
+        DBSession.commit()
         self.policy = None
-        print "Policy successfully canceled!"
+        print("Policy successfully canceled!")
 
 
 ################################
@@ -276,10 +279,11 @@ class PolicyAccounting(object):
 # shouldn't need to be edited.
 ################################
 def build_or_refresh_db():
-    db.drop_all()
-    db.create_all()
+    engine = create_engine(SQLALCHEMY_DATABASE_URI)
+    Base.metadata.drop_all(engine)
+    Base.metadata.create_all(engine)
     insert_data()
-    print "DB Ready!"
+    print("DB Ready!")
 
 
 def insert_data():
@@ -299,12 +303,12 @@ def insert_data():
     contacts.append(ryan_bucket)
 
     for contact in contacts:
-        db.session.add(contact)
-    db.session.commit()
+        DBSession.add(contact)
+    DBSession.commit()
 
     policies = []
-    p1 = Policy('Policy One', date(2015, 1, 1), 365)
-    p1.billing_schedule = 'Annual'
+    p1 = Policy("Policy One", date(2015, 1, 1), 365)
+    p1.billing_schedule = "Annual"
     p1.named_insured = john_doe_insured.id
     p1.agent = bob_smith.id
     policies.append(p1)
@@ -321,19 +325,19 @@ def insert_data():
     p3.agent = john_doe_agent.id
     policies.append(p3)
 
-    p4 = Policy('Policy Four', date(2015, 2, 1), 500)
-    p4.billing_schedule = 'Two-Pay'
+    p4 = Policy("Policy Four", date(2015, 2, 1), 500)
+    p4.billing_schedule = "Two-Pay"
     p4.named_insured = ryan_bucket.id
     p4.agent = john_doe_agent.id
     policies.append(p4)
 
     for policy in policies:
-        db.session.add(policy)
-    db.session.commit()
+        DBSession.add(policy)
+    DBSession.commit()
 
     for policy in policies:
         PolicyAccounting(policy.id)
 
     payment_for_p2 = Payment(p2.id, anna_white.id, 400, date(2015, 2, 1))
-    db.session.add(payment_for_p2)
-    db.session.commit()
+    DBSession.add(payment_for_p2)
+    DBSession.commit()

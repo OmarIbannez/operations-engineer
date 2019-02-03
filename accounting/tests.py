@@ -3,9 +3,9 @@
 import unittest
 from datetime import date
 
-from accounting import db
-from models import Contact, Invoice, Policy
-from utils import PolicyAccounting
+from accounting.sql_base import DBSession
+from accounting.models import Contact, Invoice, Policy
+from accounting.utils import PolicyAccounting
 
 """
 #######################################################
@@ -19,30 +19,30 @@ class TestBillingSchedules(unittest.TestCase):
     def setUpClass(cls):
         cls.test_agent = Contact("Test Agent", "Agent")
         cls.test_insured = Contact("Test Insured", "Named Insured")
-        db.session.add(cls.test_agent)
-        db.session.add(cls.test_insured)
-        db.session.commit()
+        DBSession.add(cls.test_agent)
+        DBSession.add(cls.test_insured)
+        DBSession.commit()
 
         cls.policy = Policy("Test Policy", date(2015, 1, 1), 1200)
-        db.session.add(cls.policy)
+        DBSession.add(cls.policy)
         cls.policy.named_insured = cls.test_insured.id
         cls.policy.agent = cls.test_agent.id
-        db.session.commit()
+        DBSession.commit()
 
     @classmethod
     def tearDownClass(cls):
-        db.session.delete(cls.test_insured)
-        db.session.delete(cls.test_agent)
-        db.session.delete(cls.policy)
-        db.session.commit()
+        DBSession.delete(cls.test_insured)
+        DBSession.delete(cls.test_agent)
+        DBSession.delete(cls.policy)
+        DBSession.commit()
 
     def setUp(self):
         pass
 
     def tearDown(self):
         for invoice in self.policy.invoices:
-            db.session.delete(invoice)
-        db.session.commit()
+            DBSession.delete(invoice)
+        DBSession.commit()
 
     def test_annual_billing_schedule(self):
         self.policy.billing_schedule = "Annual"
@@ -61,32 +61,32 @@ class TestReturnAccountBalance(unittest.TestCase):
     def setUpClass(cls):
         cls.test_agent = Contact("Test Agent", "Agent")
         cls.test_insured = Contact("Test Insured", "Named Insured")
-        db.session.add(cls.test_agent)
-        db.session.add(cls.test_insured)
-        db.session.commit()
+        DBSession.add(cls.test_agent)
+        DBSession.add(cls.test_insured)
+        DBSession.commit()
 
         cls.policy = Policy("Test Policy", date(2015, 1, 1), 1200)
         cls.policy.named_insured = cls.test_insured.id
         cls.policy.agent = cls.test_agent.id
-        db.session.add(cls.policy)
-        db.session.commit()
+        DBSession.add(cls.policy)
+        DBSession.commit()
 
     @classmethod
     def tearDownClass(cls):
-        db.session.delete(cls.test_insured)
-        db.session.delete(cls.test_agent)
-        db.session.delete(cls.policy)
-        db.session.commit()
+        DBSession.delete(cls.test_insured)
+        DBSession.delete(cls.test_agent)
+        DBSession.delete(cls.policy)
+        DBSession.commit()
 
     def setUp(self):
         self.payments = []
 
     def tearDown(self):
         for invoice in self.policy.invoices:
-            db.session.delete(invoice)
+            DBSession.delete(invoice)
         for payment in self.payments:
-            db.session.delete(payment)
-        db.session.commit()
+            DBSession.delete(payment)
+        DBSession.commit()
 
     def test_annual_on_eff_date(self):
         self.policy.billing_schedule = "Annual"
@@ -113,7 +113,7 @@ class TestReturnAccountBalance(unittest.TestCase):
         self.policy.billing_schedule = "Quarterly"
         pa = PolicyAccounting(self.policy.id)
         invoices = (
-            db.session.query(Invoice)
+            DBSession.query(Invoice)
             .filter_by(policy_id=self.policy.id)
             .order_by(Invoice.bill_date)
             .all()
@@ -126,7 +126,7 @@ class TestReturnAccountBalance(unittest.TestCase):
         self.policy.billing_schedule = "Quarterly"
         pa = PolicyAccounting(self.policy.id)
         invoices = (
-            db.session.query(Invoice)
+            DBSession.query(Invoice)
             .filter_by(policy_id=self.policy.id)
             .order_by(Invoice.bill_date)
             .all()

@@ -4,11 +4,12 @@ from sqlalchemy.orm.exc import NoResultFound
 from datetime import datetime
 
 # Import things from Flask that we need.
-from accounting import app, db
+from accounting import app
+from accounting.sql_base import DBSession
 
 # Import our models
-from models import Policy
-from utils import PolicyAccounting
+from accounting.models import Policy
+from accounting.utils import PolicyAccounting
 
 
 class InvalidUsage(Exception):
@@ -51,7 +52,7 @@ def get_tasks():
         raise InvalidUsage("Bad date format", status_code=400)
     try:
         policy = (
-            db.session.query(Policy).filter(Policy.policy_number == policy_number).one()
+            DBSession.query(Policy).filter(Policy.policy_number == policy_number).one()
         )
     except NoResultFound:
         raise InvalidUsage("Policy Not Found", status_code=404)
