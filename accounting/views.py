@@ -59,5 +59,5 @@ def get_tasks():
     invoices = policy.invoices
     pa = PolicyAccounting(policy.id)
     balance = pa.return_account_balance(date_cursor=date_cursor)
-    data = {"balance": balance, "invoices": [i.serialize() for i in invoices]}
+    data = {"balance": str(balance), "invoices": [i.serialize() for i in invoices]}
     return jsonify(data)

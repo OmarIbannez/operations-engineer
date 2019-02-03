@@ -1,12 +1,12 @@
-#!/user/bin/env python2.7
-
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
+from decimal import Decimal
 
 from sqlalchemy.orm.exc import NoResultFound
 from accounting.models import Base
 from sqlalchemy import create_engine
 from accounting.config import SQLALCHEMY_DATABASE_URI
+from typing import Union
 
 from accounting.sql_base import DBSession
 from accounting.models import Contact, Invoice, Payment, Policy
@@ -31,7 +31,7 @@ class PolicyAccounting(object):
     Accounting helper for policies
     """
 
-    def __init__(self, policy_id):
+    def __init__(self, policy_id: int) -> None:
         self.policy = DBSession.query(Policy).filter_by(id=policy_id).one()
         if self.policy.status == "Canceled":
             raise UserWarning(
@@ -44,7 +44,9 @@ class PolicyAccounting(object):
         if not self.policy.invoices:
             self.make_invoices()
 
-    def return_account_balance(self, date_cursor=None):
+    def return_account_balance(
+        self, date_cursor: Union[str, date, datetime] = None
+    ) -> Decimal:
         """
         Returns the balance of the policy in a given point in time
         :param date_cursor:
@@ -73,9 +75,14 @@ class PolicyAccounting(object):
         for payment in payments:
             due_now -= payment.amount_paid
 
-        return due_now
+        return Decimal(due_now)
 
-    def make_payment(self, contact_id=None, date_cursor=None, amount=0):
+    def make_payment(
+        self,
+        contact_id: int = 0,
+        date_cursor: Union[str, date, datetime] = None,
+        amount: Decimal = Decimal(0),
+    ) -> Payment:
         """
         Creates a payment in a given point in time
         :param contact_id:
@@ -109,7 +116,9 @@ class PolicyAccounting(object):
 
         return payment
 
-    def evaluate_cancellation_pending_due_to_non_pay(self, date_cursor=None):
+    def evaluate_cancellation_pending_due_to_non_pay(
+        self, date_cursor: Union[str, date, datetime] = None
+    ) -> bool:
         """
         If this function returns true, an invoice
         on a policy has passed the due date without
@@ -135,8 +144,9 @@ class PolicyAccounting(object):
                 continue
             else:
                 return True
+        return False
 
-    def evaluate_cancel(self, date_cursor=None):
+    def evaluate_cancel(self, date_cursor: Union[str, date, datetime] = None) -> bool:
         """
         Check if there is any balance after any of the cancel dates
         of the invoices in this policy
@@ -158,12 +168,11 @@ class PolicyAccounting(object):
             if not self.return_account_balance(invoice.cancel_date):
                 continue
             else:
-                print("THIS POLICY SHOULD HAVE CANCELED")
-                break
+                return True
         else:
-            print("THIS POLICY SHOULD NOT CANCEL")
+            return False
 
-    def switch_billing_schedule(self, new_billing_schedule):
+    def switch_billing_schedule(self, new_billing_schedule: str) -> None:
         """
         Move a policy to a different billing schedule
         :param new_billing_schedule:
@@ -185,7 +194,7 @@ class PolicyAccounting(object):
         DBSession.flush()
         self.make_invoices()
 
-    def make_invoices(self):
+    def make_invoices(self) -> None:
         """
         Create invoices for the policy according with its billing schedule
         """
@@ -262,7 +271,9 @@ class PolicyAccounting(object):
             DBSession.add(invoice)
         DBSession.commit()
 
-    def cancel_policy(self, reason, date_cursor=None):
+    def cancel_policy(
+        self, reason: str, date_cursor: Union[str, date, datetime] = None
+    ):
         if not date_cursor:
             date_cursor = datetime.now().date()
         self.policy.cancel_reason = reason
